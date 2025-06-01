@@ -1,0 +1,139 @@
+/* style.css - Neon Cyberpunk Theme for X³O³ */
+body {
+    background: #0a0a0f;
+    color: #fff;
+    font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-container {
+    background: rgba(20, 20, 40, 0.95);
+    border: 2px solid #0ff;
+    border-radius: 20px;
+    box-shadow: 0 0 40px 10px #0ff8, 0 0 80px 10px #f06 inset;
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    margin-top: 3vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 95vw;
+}
+
+.neon-title {
+    font-size: 2.5rem;
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 30px #0ff, 0 0 60px #f06;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.2em;
+}
+
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(3, 70px);
+    grid-template-rows: repeat(3, 70px);
+    gap: 18px;
+    background: rgba(10, 10, 30, 0.7);
+    border-radius: 12px;
+    box-shadow: 0 0 20px 2px #0ff8, 0 0 40px 2px #f06 inset;
+    margin-bottom: 1.5rem;
+}
+
+.cell {
+    width: 70px;
+    height: 70px;
+    background: #181828;
+    border: 2.5px solid #222;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    box-shadow: 0 0 10px #0ff2, 0 0 20px #f062 inset;
+    user-select: none;
+    position: relative;
+}
+
+.cell.x {
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 30px #0ff;
+}
+
+.cell.o {
+    color: #f06;
+    text-shadow: 0 0 10px #f06, 0 0 30px #f06;
+}
+
+.cell.winner {
+    border-color: #fff;
+    box-shadow: 0 0 30px 10px #fff, 0 0 60px 10px #0ff;
+    z-index: 2;
+}
+
+.neon-btn {
+    background: none;
+    border: 2px solid #0ff;
+    color: #0ff;
+    padding: 0.7em 2em;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 1rem;
+    box-shadow: 0 0 10px #0ff, 0 0 20px #f06 inset;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.neon-btn:hover {
+    background: #0ff2;
+    color: #181828;
+    box-shadow: 0 0 30px #0ff, 0 0 40px #f06 inset;
+}
+
+.game-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.neon-text {
+    color: #fff;
+    text-shadow: 0 0 8px #0ff, 0 0 16px #f06;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    min-height: 1.5em;
+}
+
+.footer {
+    margin-top: 2rem;
+    color: #888;
+    font-size: 0.9rem;
+    text-align: center;
+    text-shadow: 0 0 5px #0ff, 0 0 10px #f06;
+}
+
+@media (max-width: 600px) {
+    .game-board {
+        grid-template-columns: repeat(3, 18vw);
+        grid-template-rows: repeat(3, 18vw);
+        gap: 4vw;
+    }
+    .cell {
+        width: 18vw;
+        height: 18vw;
+        font-size: 2.2rem;
+    }
+    .game-container {
+        padding: 1rem 0.2rem 1rem 0.2rem;
+    }
+    .neon-title {
+        font-size: 1.5rem;
+    }
+}
