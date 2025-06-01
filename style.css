@@ -34,9 +34,9 @@ body {
 
 .game-board {
     display: grid;
-    grid-template-columns: repeat(3, 70px);
-    grid-template-rows: repeat(3, 70px);
-    gap: 18px;
+    grid-template-columns: repeat(3, 87.5px);
+    grid-template-rows: repeat(3, 87.5px);
+    gap: 22.5px;
     background: rgba(10, 10, 30, 0.7);
     border-radius: 12px;
     box-shadow: 0 0 20px 2px #0ff8, 0 0 40px 2px #f06 inset;
@@ -44,15 +44,15 @@ body {
 }
 
 .cell {
-    width: 70px;
-    height: 70px;
+    width: 87.5px;
+    height: 87.5px;
     background: #181828;
     border: 2.5px solid #222;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 3.125rem;
     font-weight: bold;
     cursor: pointer;
     transition: box-shadow 0.2s, border-color 0.2s;
@@ -121,14 +121,14 @@ body {
 
 @media (max-width: 600px) {
     .game-board {
-        grid-template-columns: repeat(3, 18vw);
-        grid-template-rows: repeat(3, 18vw);
-        gap: 4vw;
+        grid-template-columns: repeat(3, 22.5vw);
+        grid-template-rows: repeat(3, 22.5vw);
+        gap: 5vw;
     }
     .cell {
-        width: 18vw;
-        height: 18vw;
-        font-size: 2.2rem;
+        width: 22.5vw;
+        height: 22.5vw;
+        font-size: 2.75rem;
     }
     .game-container {
         padding: 1rem 0.2rem 1rem 0.2rem;
