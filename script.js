@@ -123,4 +123,30 @@ window.addEventListener('resize', () => {
     // Could add dynamic font scaling if desired
 });
 
+// --- Theme Switching ---
+const themeSwitcher = document.getElementById('themeSwitcher');
+const THEME_KEY = 'x3o3-theme';
+const themeMap = {
+    'neon': 'theme-neon',
+    'high-contrast': 'theme-high-contrast',
+    'toca-boca': 'theme-toca-boca'
+};
+function applyTheme(theme) {
+    // Remove all theme classes
+    document.body.classList.remove('theme-neon', 'theme-high-contrast', 'theme-toca-boca');
+    // Add selected
+    document.body.classList.add(themeMap[theme] || 'theme-neon');
+}
+function setTheme(theme) {
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+}
+function restoreTheme() {
+    const saved = localStorage.getItem(THEME_KEY) || 'neon';
+    themeSwitcher.value = saved;
+    applyTheme(saved);
+}
+themeSwitcher.addEventListener('change', e => setTheme(e.target.value));
+restoreTheme();
+
 // --- End of script.js ---
