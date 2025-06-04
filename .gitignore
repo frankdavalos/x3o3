@@ -1,0 +1,3 @@
+# Ignore the codebase overview and all PRDs
+CODEBASE_OVERVIEW.md
+prds/

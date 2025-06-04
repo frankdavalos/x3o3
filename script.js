@@ -12,12 +12,78 @@ const winCombos = [
     [0,4,8], [2,4,6]           // diags
 ];
 
+// --- Game Modes ---
+const MODES = {
+    classic: 'Classic',
+    beginner: 'Beginner',
+    normal: 'Normal',
+    expert: 'Expert',
+    luck: 'Luck'
+};
+let gameMode = 'classic';
+let blockedCell = null; // for luck mode
+
 // --- DOM Elements ---
 const gameBoard = document.getElementById('gameBoard');
 const statusText = document.getElementById('status');
 const newGameBtn = document.getElementById('newGameBtn');
 
-// --- Initialize Board ---
+// --- Splash Elements ---
+const splash = document.getElementById('splash');
+const splashForm = document.getElementById('splashForm');
+const themeSwitcherSplash = document.getElementById('themeSwitcherSplash');
+const gameContainer = document.getElementById('gameContainer');
+const themeSwitcher = document.getElementById('themeSwitcher');
+const backToSplashBtn = document.getElementById('backToSplashBtn');
+
+// --- Theme Persistence ---
+function setTheme(theme) {
+    document.body.classList.remove('theme-high-contrast', 'theme-toca-boca');
+    if (theme === 'high-contrast') document.body.classList.add('theme-high-contrast');
+    else if (theme === 'toca-boca') document.body.classList.add('theme-toca-boca');
+    localStorage.setItem('theme', theme);
+    themeSwitcher.value = theme;
+    themeSwitcherSplash.value = theme;
+}
+function getTheme() {
+    return localStorage.getItem('theme') || 'neon';
+}
+themeSwitcher.addEventListener('change', e => setTheme(e.target.value));
+themeSwitcherSplash.addEventListener('change', e => setTheme(e.target.value));
+
+// --- Splash Logic ---
+function showSplash() {
+    splash.style.display = 'flex';
+    gameContainer.style.display = 'none';
+}
+function hideSplash() {
+    splash.style.display = 'none';
+    gameContainer.style.display = 'flex';
+}
+backToSplashBtn.addEventListener('click', showSplash);
+
+splashForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const mode = splashForm.elements['gameMode'].value;
+    gameMode = mode;
+    setTheme(themeSwitcherSplash.value);
+    hideSplash();
+    startGame();
+});
+
+// --- Game Logic ---
+function startGame() {
+    for (let i = 0; i < 9; i++) board[i] = null;
+    moveHistory.X = [];
+    moveHistory.O = [];
+    currentPlayer = 'X';
+    gameActive = true;
+    blockedCell = null;
+    createBoard();
+    updateBoard();
+    updateStatus();
+}
+
 function createBoard() {
     gameBoard.innerHTML = '';
     for (let i = 0; i < 9; i++) {
@@ -29,21 +95,49 @@ function createBoard() {
     }
 }
 
-// --- Handle Cell Click ---
 function handleCellClick(e) {
     const idx = +e.target.dataset.index;
-    if (!gameActive || board[idx]) return; // Ignore if not active or cell filled
+    if (!gameActive || board[idx]) return;
+    if (gameMode === 'luck' && blockedCell === idx) return;
 
     // Place mark
     board[idx] = currentPlayer;
     moveHistory[currentPlayer].push(idx);
     updateBoard();
 
-    // Remove oldest if more than 3 marks
+    // Classic mode: no rotation
+    if (gameMode === 'classic') {
+        // Check win
+        const winner = checkWinner();
+        if (winner) {
+            gameActive = false;
+            highlightWinner(winner.combo);
+            statusText.innerHTML = `<span style='color:${winner.player==="X"?"#0ff":"#f06"}'>${winner.player}</span> wins!`;
+            return;
+        }
+        if (board.every(cell => cell)) {
+            statusText.textContent = "It's a draw!";
+            gameActive = false;
+            return;
+        }
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        updateStatus();
+        return;
+    }
+
+    // Rotating modes
     if (moveHistory[currentPlayer].length > 3) {
         const oldest = moveHistory[currentPlayer].shift();
         board[oldest] = null;
         updateBoard();
+    }
+    // Luck mode: block a cell after 6th move
+    if (gameMode === 'luck' && !blockedCell && moveHistory.X.length + moveHistory.O.length === 6) {
+        let open = board.map((v, i) => v ? null : i).filter(i => i !== null);
+        if (open.length) {
+            blockedCell = open[Math.floor(Math.random() * open.length)];
+            updateBoard();
+        }
     }
 
     // Check win
@@ -54,32 +148,47 @@ function handleCellClick(e) {
         statusText.innerHTML = `<span style='color:${winner.player==="X"?"#0ff":"#f06"}'>${winner.player}</span> wins!`;
         return;
     }
-
-    // Check draw
-    if (board.every(cell => cell)) {
+    if (board.every((cell, i) => cell || (gameMode === 'luck' && blockedCell === i))) {
         statusText.textContent = "It's a draw!";
         gameActive = false;
         return;
     }
-
-    // Next turn
     currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
     updateStatus();
 }
 
-// --- Update Board UI ---
 function updateBoard() {
     for (let i = 0; i < 9; i++) {
         const cell = gameBoard.children[i];
         cell.textContent = board[i] ? board[i] : '';
         cell.className = 'cell';
         if (board[i]) cell.classList.add(board[i].toLowerCase());
+        // Beginner: fade oldest mark for each player (no min count)
+        if (gameMode === 'beginner') {
+            ['X', 'O'].forEach(player => {
+                if (moveHistory[player].length > 0 && moveHistory[player][0] === i) {
+                    cell.classList.add('fade-out');
+                }
+            });
+        }
+        // Expert: hide all but most recent
+        if (gameMode === 'expert') {
+            ['X', 'O'].forEach(player => {
+                if (moveHistory[player].length > 1 && moveHistory[player].includes(i) && moveHistory[player][moveHistory[player].length-1] !== i) {
+                    cell.classList.add('hide-mark');
+                }
+            });
+        }
+        // Luck: blocked cell
+        if (gameMode === 'luck' && blockedCell === i) {
+            cell.classList.add('blocked', 'cracked');
+            cell.textContent = '';
+        }
     }
 }
 
-// --- Update Status ---
 function updateStatus() {
-    statusText.innerHTML = `Turn: <span style='color:${currentPlayer==="X"?"#0ff":"#f06"}'>${currentPlayer}</span>`;
+    statusText.innerHTML = `Turn: <span style='color:${currentPlayer==="X"?"#0ff":"#f06"}'>${currentPlayer}</span> | Mode: <b>${MODES[gameMode]}</b>`;
 }
 
 // --- Check for Winner ---
@@ -112,11 +221,13 @@ function newGame() {
 }
 
 // --- Event Listeners ---
-newGameBtn.addEventListener('click', newGame);
+newGameBtn.addEventListener('click', startGame);
 
-// --- Start Game ---
-createBoard();
-newGame();
+// --- Initial Load ---
+window.addEventListener('DOMContentLoaded', () => {
+    setTheme(getTheme());
+    showSplash();
+});
 
 // --- Responsive Font Sizing (Optional) ---
 window.addEventListener('resize', () => {
