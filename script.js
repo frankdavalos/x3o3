@@ -31,25 +31,21 @@ const newGameBtn = document.getElementById('newGameBtn');
 // --- Splash Elements ---
 const splash = document.getElementById('splash');
 const splashForm = document.getElementById('splashForm');
-const themeSwitcherSplash = document.getElementById('themeSwitcherSplash');
 const gameContainer = document.getElementById('gameContainer');
 const themeSwitcher = document.getElementById('themeSwitcher');
 const backToSplashBtn = document.getElementById('backToSplashBtn');
 
-// --- Theme Persistence ---
+// --- Theme Persistence and Switching ---
 function setTheme(theme) {
-    document.body.classList.remove('theme-high-contrast', 'theme-toca-boca');
-    if (theme === 'high-contrast') document.body.classList.add('theme-high-contrast');
-    else if (theme === 'toca-boca') document.body.classList.add('theme-toca-boca');
+    document.body.classList.remove('theme-high-contrast');
+    if (theme === 'high-contrast') {
+        document.body.classList.add('theme-high-contrast');
+    }
     localStorage.setItem('theme', theme);
-    themeSwitcher.value = theme;
-    themeSwitcherSplash.value = theme;
 }
 function getTheme() {
     return localStorage.getItem('theme') || 'neon';
 }
-themeSwitcher.addEventListener('change', e => setTheme(e.target.value));
-themeSwitcherSplash.addEventListener('change', e => setTheme(e.target.value));
 
 // --- Splash Logic ---
 function showSplash() {
@@ -66,7 +62,8 @@ splashForm.addEventListener('submit', e => {
     e.preventDefault();
     const mode = splashForm.elements['gameMode'].value;
     gameMode = mode;
-    setTheme(themeSwitcherSplash.value);
+    const theme = splashForm.elements['themeSwitcherSplash'].value;
+    setTheme(theme);
     hideSplash();
     startGame();
 });
@@ -233,5 +230,37 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('resize', () => {
     // Could add dynamic font scaling if desired
 });
+
+// --- PWA: Service Worker Registration & Update Handling ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+      // Listen for updates
+      reg.onupdatefound = () => {
+        const installingWorker = reg.installing;
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              showUpdateNotification();
+            }
+          }
+        };
+      };
+    });
+  });
+}
+
+function showUpdateNotification() {
+  const updateBar = document.createElement('div');
+  updateBar.textContent = 'A new version is available. Click to update!';
+  updateBar.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;background:#0ff;color:#181a20;font-weight:bold;text-align:center;padding:1em;z-index:2000;cursor:pointer;box-shadow:0 -2px 8px #0ff8;';
+  updateBar.onclick = () => {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
+    }
+    window.location.reload();
+  };
+  document.body.appendChild(updateBar);
+}
 
 // --- End of script.js ---
