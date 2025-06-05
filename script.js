@@ -31,25 +31,21 @@ const newGameBtn = document.getElementById('newGameBtn');
 // --- Splash Elements ---
 const splash = document.getElementById('splash');
 const splashForm = document.getElementById('splashForm');
-const themeSwitcherSplash = document.getElementById('themeSwitcherSplash');
 const gameContainer = document.getElementById('gameContainer');
 const themeSwitcher = document.getElementById('themeSwitcher');
 const backToSplashBtn = document.getElementById('backToSplashBtn');
 
-// --- Theme Persistence ---
+// --- Theme Persistence and Switching ---
 function setTheme(theme) {
-    document.body.classList.remove('theme-high-contrast', 'theme-toca-boca');
-    if (theme === 'high-contrast') document.body.classList.add('theme-high-contrast');
-    else if (theme === 'toca-boca') document.body.classList.add('theme-toca-boca');
+    document.body.classList.remove('theme-high-contrast');
+    if (theme === 'high-contrast') {
+        document.body.classList.add('theme-high-contrast');
+    }
     localStorage.setItem('theme', theme);
-    themeSwitcher.value = theme;
-    themeSwitcherSplash.value = theme;
 }
 function getTheme() {
     return localStorage.getItem('theme') || 'neon';
 }
-themeSwitcher.addEventListener('change', e => setTheme(e.target.value));
-themeSwitcherSplash.addEventListener('change', e => setTheme(e.target.value));
 
 // --- Splash Logic ---
 function showSplash() {
@@ -66,7 +62,8 @@ splashForm.addEventListener('submit', e => {
     e.preventDefault();
     const mode = splashForm.elements['gameMode'].value;
     gameMode = mode;
-    setTheme(themeSwitcherSplash.value);
+    const theme = splashForm.elements['themeSwitcherSplash'].value;
+    setTheme(theme);
     hideSplash();
     startGame();
 });

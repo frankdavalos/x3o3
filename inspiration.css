@@ -1,28 +1,74 @@
-/* --- TRON Neon Cyberpunk Theme (Inspired by inspiration.css) --- */
+/* style.css - Neon Cyberpunk Theme for X³O³ */
+
+/* Theme variables */
 :root {
   --bg: #0a0a0f;
-  --fg: #eafcff;
-  --primary: #16f0ff;
-  --secondary: #ff2eae;
-  --cell-bg: #10182a;
-  --cell-border: #16f0ff88;
-  --x-color: #16f0ff;
-  --o-color: #ff2eae;
+  --fg: #fff;
+  --primary: #0ff;
+  --secondary: #f06;
+  --cell-bg: #181828;
+  --cell-border: #222;
+  --x-color: #0ff;
+  --o-color: #f06;
   --winner-border: #fff;
-  --winner-shadow: #16f0ff;
+  --winner-shadow: #0ff;
   --btn-bg: none;
-  --btn-border: #16f0ff;
-  --btn-color: #16f0ff;
-  --btn-hover-bg: #16f0ff22;
-  --btn-hover-color: #10182a;
-  --title-color: #16f0ff;
-  --title-shadow: 0 0 16px #16f0ff, 0 0 40px #16f0ff, 0 0 80px #16f0ff, 0 0 8px #fff;
-  --footer-color: #7ffcff;
-  --footer-shadow: 0 0 8px #16f0ff, 0 0 16px #ff2eae;
+  --btn-border: #0ff;
+  --btn-color: #0ff;
+  --btn-hover-bg: #0ff2;
+  --btn-hover-color: #181828;
+  --title-color: #0ff;
+  --title-shadow: 0 0 10px #0ff, 0 0 30px #0ff, 0 0 60px #f06;
+  --footer-color: #888;
+  --footer-shadow: 0 0 5px #0ff, 0 0 10px #f06;
+}
+
+.theme-high-contrast {
+  --bg: #000;
+  --fg: #fff;
+  --primary: #fff200;
+  --secondary: #00aaff;
+  --cell-bg: #000;
+  --cell-border: #fff;
+  --x-color: #fff200;
+  --o-color: #00aaff;
+  --winner-border: #fff;
+  --winner-shadow: #fff200;
+  --btn-bg: #fff;
+  --btn-border: #fff200;
+  --btn-color: #000;
+  --btn-hover-bg: #fff200;
+  --btn-hover-color: #000;
+  --title-color: #fff200;
+  --title-shadow: 0 0 10px #fff200, 0 0 30px #fff200;
+  --footer-color: #fff;
+  --footer-shadow: none;
+}
+
+.theme-toca-boca {
+  --bg: #dbb390;
+  --fg: #2d2d2d;
+  --primary: #ffb347;
+  --secondary: #ff5e5b;
+  --cell-bg: #ffe6a7;
+  --cell-border: #ffb347;
+  --x-color: #ff5e5b;
+  --o-color: #2d2d2d;
+  --winner-border: #ffb347;
+  --winner-shadow: #ff5e5b;
+  --btn-bg: #ffb347;
+  --btn-border: #2d2d2d;
+  --btn-color: #2d2d2d;
+  --btn-hover-bg: #ff5e5b;
+  --btn-hover-color: #fff;
+  --title-color: #ff5e5b;
+  --title-shadow: none;
+  --footer-color: #2d2d2d;
+  --footer-shadow: none;
 }
 
 body {
-    background: var(--bg) url('data:image/svg+xml;utf8,<svg width="100%25" height="100%25" xmlns="http://www.w3.org/2000/svg"><rect fill="%230a0a0f" width="100%25" height="100%25"/><g stroke="%2316f0ff" stroke-width="0.5" opacity="0.10"> <line x1="0" y1="24" x2="100%25" y2="24"/><line x1="0" y1="48" x2="100%25" y2="48"/><line x1="0" y1="72" x2="100%25" y2="72"/><line x1="24" y1="0" x2="24" y2="100%25"/><line x1="48" y1="0" x2="48" y2="100%25"/><line x1="72" y1="0" x2="72" y2="100%25"/></g></svg>') repeat;
+    background: var(--bg);
     color: var(--fg);
     font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
     min-height: 100vh;
@@ -33,15 +79,6 @@ body {
     align-items: center;
     padding: clamp(0.5rem, 4vw, 2.5rem);
     box-sizing: border-box;
-}
-
-.neon-title {
-    font-family: 'Bungee Outline', 'Orbitron', 'Segoe UI', Arial, sans-serif;
-    font-size: clamp(1.8rem, 9vw, 3.75rem);
-    color: var(--title-color);
-    text-shadow: var(--title-shadow);
-    margin-bottom: clamp(0.5rem, 2vw, 1.5rem);
-    letter-spacing: 0.2em;
 }
 
 .game-container {
@@ -61,10 +98,18 @@ body {
     margin: auto;
 }
 
+.neon-title {
+    font-size: clamp(1.2rem, 6vw, 2.5rem);
+    color: var(--title-color);
+    text-shadow: var(--title-shadow);
+    margin-bottom: clamp(0.5rem, 2vw, 1.5rem);
+    letter-spacing: 0.2em;
+}
+
 .game-board {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr); /* Fixed misplaced parenthesis */
     gap: clamp(0.5rem, 2vw, 1rem);
     width: 100%;
     max-width: 304px;
@@ -76,7 +121,7 @@ body {
 .cell {
     width: 100%;
     height: 100%;
-    font-size: clamp(4rem, 10vw, 6rem);
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,13 +131,6 @@ body {
     box-shadow: 0 0 10px var(--primary)2, 0 0 20px var(--secondary)2 inset;
     overflow: hidden;
     position: relative;
-}
-
-.cell.x, .cell.o {
-    font-family: 'Bungee Outline', 'Orbitron', 'Segoe UI', Arial, sans-serif;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    /* Removed -webkit-text-stroke for better cross-device compatibility */
 }
 
 .cell.x {
@@ -153,7 +191,6 @@ body {
     text-shadow: var(--footer-shadow);
 }
 
-/* Responsive adjustments */
 @media (max-width: 600px), (max-height: 600px) {
     body {
         padding: clamp(0.5rem, 3vw, 1.5rem);
