@@ -95,6 +95,8 @@ function createBoard() {
 function handleCellClick(e) {
     const idx = +e.target.dataset.index;
     if (!gameActive || board[idx]) return;
+
+    // Ensure blocked cell remains locked
     if (gameMode === 'luck' && blockedCell === idx) return;
 
     // Place mark
@@ -109,7 +111,7 @@ function handleCellClick(e) {
         if (winner) {
             gameActive = false;
             highlightWinner(winner.combo);
-            statusText.innerHTML = `<span style='color:${winner.player==="X"?"#0ff":"#f06"}'>${winner.player}</span> wins!`;
+            statusText.innerHTML = `<span style='color:${winner.player === "X" ? "#0ff" : "#f06"}'>${winner.player}</span> wins!`;
             return;
         }
         if (board.every(cell => cell)) {
@@ -142,7 +144,7 @@ function handleCellClick(e) {
     if (winner) {
         gameActive = false;
         highlightWinner(winner.combo);
-        statusText.innerHTML = `<span style='color:${winner.player==="X"?"#0ff":"#f06"}'>${winner.player}</span> wins!`;
+        statusText.innerHTML = `<span style='color:${winner.player === "X" ? "#0ff" : "#f06"}'>${winner.player}</span> wins!`;
         return;
     }
     if (board.every((cell, i) => cell || (gameMode === 'luck' && blockedCell === i))) {
@@ -160,6 +162,20 @@ function updateBoard() {
         cell.textContent = board[i] ? board[i] : '';
         cell.className = 'cell';
         if (board[i]) cell.classList.add(board[i].toLowerCase());
+
+        // Expert: hide all but most recent mark for each player
+        if (gameMode === 'expert') {
+            ['X', 'O'].forEach(player => {
+                if (moveHistory[player].includes(i)) {
+                    const isMostRecent = moveHistory[player][moveHistory[player].length - 1] === i;
+                    if (!isMostRecent) {
+                        cell.classList.add('hide-mark');
+                        cell.textContent = ''; // Clear text for hidden marks
+                    }
+                }
+            });
+        }
+
         // Beginner: fade oldest mark for each player (no min count)
         if (gameMode === 'beginner') {
             ['X', 'O'].forEach(player => {
@@ -168,17 +184,10 @@ function updateBoard() {
                 }
             });
         }
-        // Expert: hide all but most recent
-        if (gameMode === 'expert') {
-            ['X', 'O'].forEach(player => {
-                if (moveHistory[player].length > 1 && moveHistory[player].includes(i) && moveHistory[player][moveHistory[player].length-1] !== i) {
-                    cell.classList.add('hide-mark');
-                }
-            });
-        }
+
         // Luck: blocked cell
         if (gameMode === 'luck' && blockedCell === i) {
-            cell.classList.add('blocked', 'cracked');
+            cell.classList.add('blocked');
             cell.textContent = '';
         }
     }

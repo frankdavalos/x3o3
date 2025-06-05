@@ -153,6 +153,21 @@ body {
     text-shadow: var(--footer-shadow);
 }
 
+/* Fade out effect for older marks */
+.fade-out {
+    opacity: 0.5; /* Reduce opacity by 50% */
+    transition: opacity 0.3s ease-in-out; /* Smooth transition */
+}
+
+/* Blocked cells style */
+.blocked {
+    background: repeating-linear-gradient(45deg, #10182a, #10182a 10px, #808080 10px, #808080 20px); /* 45-degree gray bands */
+    opacity: 0.7; /* Slight transparency */
+    border: 2px solid #16f0ff88; /* Solid border matching the blocked color */
+    box-shadow: 0 0 10px #16f0ff88, 0 0 20px #16f0ff88 inset; /* Glow effect */
+    cursor: not-allowed; /* Change cursor to indicate unclickable */
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px), (max-height: 600px) {
     body {
