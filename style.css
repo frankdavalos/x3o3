@@ -141,7 +141,7 @@ body {
     font-size: 1.1em;
     display: flex;
     align-items: center;
-    gap: 0.5em;
+    gap: 0.0em;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 .mode-card input[type="radio"] {

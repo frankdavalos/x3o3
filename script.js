@@ -234,4 +234,36 @@ window.addEventListener('resize', () => {
     // Could add dynamic font scaling if desired
 });
 
+// --- PWA: Service Worker Registration & Update Handling ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+      // Listen for updates
+      reg.onupdatefound = () => {
+        const installingWorker = reg.installing;
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              showUpdateNotification();
+            }
+          }
+        };
+      };
+    });
+  });
+}
+
+function showUpdateNotification() {
+  const updateBar = document.createElement('div');
+  updateBar.textContent = 'A new version is available. Click to update!';
+  updateBar.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;background:#0ff;color:#181a20;font-weight:bold;text-align:center;padding:1em;z-index:2000;cursor:pointer;box-shadow:0 -2px 8px #0ff8;';
+  updateBar.onclick = () => {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
+    }
+    window.location.reload();
+  };
+  document.body.appendChild(updateBar);
+}
+
 // --- End of script.js ---
