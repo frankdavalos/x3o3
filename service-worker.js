@@ -29,6 +29,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Bypass Firestore requests
+  if (event.request.url.startsWith('https://firestore.googleapis.com/')) {
+    return; // Let the network handle it, do not intercept
+  }
+
   event.respondWith(
     caches.match(event.request).then(response =>
       response || fetch(event.request)

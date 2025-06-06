@@ -333,6 +333,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// --- Multiplayer Integration (MVP) ---
+// Example usage (UI integration required):
+// 1. Call X3O3Multiplayer.initFirebase() on app load
+// 2. Use X3O3Multiplayer.createLobby(selectedMode) to create a lobby
+// 3. Use X3O3Multiplayer.joinLobby(code) to join
+// 4. Use X3O3Multiplayer.listenToGame(code, callback) for real-time updates
+// 5. Use X3O3Multiplayer.makeMove(code, idx, value) to make a move
+// See multiplayer.js for details
+
 // --- PWA: Service Worker Registration & Update Handling ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -364,5 +373,191 @@ function showUpdateNotification() {
   };
   document.body.appendChild(updateBar);
 }
+
+// --- Multiplayer UI & Logic Integration ---
+window.addEventListener('DOMContentLoaded', () => {
+    // Multiplayer UI elements
+    const showMultiplayerBtn = document.getElementById('showMultiplayerBtn');
+    const multiplayerForm = document.getElementById('multiplayerForm');
+    const splashForm = document.getElementById('splashForm');
+    const createLobbyBtn = document.getElementById('createLobbyBtn');
+    const showJoinLobbyBtn = document.getElementById('showJoinLobbyBtn');
+    const lobbyCreateSection = document.getElementById('lobbyCreateSection');
+    const lobbyJoinSection = document.getElementById('lobbyJoinSection');
+    const lobbyCodeDisplay = document.getElementById('lobbyCodeDisplay');
+    const lobbyStatus = document.getElementById('lobbyStatus');
+    const copyLobbyCodeBtn = document.getElementById('copyLobbyCodeBtn');
+    const cancelLobbyBtn = document.getElementById('cancelLobbyBtn');
+    const joinLobbyCodeInput = document.getElementById('joinLobbyCodeInput');
+    const joinLobbyBtn = document.getElementById('joinLobbyBtn');
+    const joinLobbyError = document.getElementById('joinLobbyError');
+    const cancelJoinLobbyBtn = document.getElementById('cancelJoinLobbyBtn');
+
+    let multiplayerUnsub = null;
+    let currentLobbyCode = null;
+    let multiplayerRole = null;
+    let multiplayerMode = null;
+    let isMultiplayer = false;
+
+    // Initialize Firebase for multiplayer
+    X3O3Multiplayer.initFirebase().catch(console.error);
+
+    // Show multiplayer form
+    showMultiplayerBtn.addEventListener('click', () => {
+        splashForm.style.display = 'none';
+        multiplayerForm.style.display = 'flex';
+        lobbyCreateSection.style.display = 'none';
+        lobbyJoinSection.style.display = 'none';
+    });
+
+    // Create Lobby
+    createLobbyBtn.addEventListener('click', async () => {
+        lobbyCreateSection.style.display = 'flex';
+        lobbyJoinSection.style.display = 'none';
+        lobbyStatus.textContent = 'Creating lobby...';
+        joinLobbyError.textContent = '';
+        // Get selected mode
+        const mode = splashForm.elements['gameMode'].value;
+        try {
+            console.log('Calling createLobby with mode:', mode);
+            const code = await X3O3Multiplayer.createLobby(mode);
+            currentLobbyCode = code;
+            multiplayerMode = mode;
+            multiplayerRole = 'X';
+            isMultiplayer = true;
+            lobbyCodeDisplay.textContent = `Lobby Code: ${code}`;
+            lobbyStatus.textContent = 'Waiting for opponent to join...';
+            // Listen for game start
+            if (multiplayerUnsub) multiplayerUnsub();
+            multiplayerUnsub = X3O3Multiplayer.listenToGame(code, data => {
+                if (data.status === 'in_progress' && data.players.O) {
+                    lobbyStatus.textContent = 'Opponent joined! Starting game...';
+                    setTimeout(() => {
+                        multiplayerForm.style.display = 'none';
+                        hideSplash();
+                        startMultiplayerGame(data, code, 'X');
+                    }, 500);
+                }
+            });
+        } catch (e) {
+            lobbyStatus.textContent = 'Error creating lobby.';
+            console.error('Error from createLobbyBtn:', e);
+        }
+    });
+
+    // Join Lobby
+    joinLobbyBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        lobbyJoinSection.style.display = 'flex'; // Ensure join section is visible
+        console.log('[JoinLobby] Button clicked');
+        const code = joinLobbyCodeInput.value.trim().toUpperCase();
+        console.log('[JoinLobby] Entered code:', code);
+        if (!code || code.length !== 6) {
+            joinLobbyError.textContent = 'Enter a valid 6-letter code.';
+            console.log('[JoinLobby] Invalid code');
+            return;
+        }
+        joinLobbyError.textContent = 'Joining lobby...';
+        try {
+            const data = await X3O3Multiplayer.joinLobby(code);
+            console.log('[JoinLobby] joinLobby resolved:', data);
+            currentLobbyCode = code;
+            multiplayerMode = data.mode;
+            multiplayerRole = 'O';
+            isMultiplayer = true;
+            joinLobbyError.textContent = '';
+            // Listen for game state
+            if (multiplayerUnsub) multiplayerUnsub();
+            multiplayerUnsub = X3O3Multiplayer.listenToGame(code, data => {
+                console.log('[JoinLobby] listenToGame snapshot:', data);
+                // Only start the game when both players are present and status is in_progress
+                if (data.status === 'in_progress' && data.players.O) {
+                    multiplayerForm.style.display = 'none';
+                    hideSplash();
+                    startMultiplayerGame(data, code, 'O');
+                }
+            });
+        } catch (e) {
+            joinLobbyError.textContent = e.message || 'Failed to join lobby.';
+            console.error('[JoinLobby] Error:', e);
+        }
+    });
+
+    // Copy lobby code
+    copyLobbyCodeBtn.addEventListener('click', () => {
+        if (currentLobbyCode) {
+            navigator.clipboard.writeText(currentLobbyCode);
+            lobbyStatus.textContent = 'Copied!';
+        }
+    });
+
+    // Cancel lobby/join
+    cancelLobbyBtn.addEventListener('click', () => {
+        lobbyCreateSection.style.display = 'none';
+        multiplayerForm.style.display = 'flex';
+        if (multiplayerUnsub) multiplayerUnsub();
+    });
+    cancelJoinLobbyBtn.addEventListener('click', () => {
+        lobbyJoinSection.style.display = 'none';
+        multiplayerForm.style.display = 'flex';
+        joinLobbyError.textContent = '';
+        if (multiplayerUnsub) multiplayerUnsub();
+    });
+
+    // Show Join Lobby section
+    showJoinLobbyBtn.addEventListener('click', () => {
+        lobbyCreateSection.style.display = 'none';
+        lobbyJoinSection.style.display = 'flex';
+        joinLobbyError.textContent = '';
+        joinLobbyCodeInput.focus(); // Focus the input for better UX
+    });
+
+    // --- Multiplayer Game Logic ---
+    function startMultiplayerGame(gameData, code, role) {
+        createBoard(); // Ensure the board DOM exists
+        // Set up board, mode, and state from Firestore
+        for (let i = 0; i < 9; i++) board[i] = gameData.board[i] || null;
+        moveHistory.X = gameData.board.map((v, i) => v === 'X' ? i : null).filter(i => i !== null);
+        moveHistory.O = gameData.board.map((v, i) => v === 'O' ? i : null).filter(i => i !== null);
+        currentPlayer = gameData.currentTurn;
+        gameActive = gameData.status === 'in_progress';
+        gameMode = gameData.mode;
+        updateBoard();
+        updateStatus();
+        // Remove all previous cell click handlers
+        for (let i = 0; i < 9; i++) {
+            const cell = gameBoard.children[i];
+            cell.replaceWith(cell.cloneNode(true)); // Remove all listeners
+        }
+        // Add multiplayer cell click handlers
+        for (let i = 0; i < 9; i++) {
+            const cell = gameBoard.children[i];
+            cell.onclick = async () => {
+                // Only allow move if it's this player's turn and cell is empty
+                if (!gameActive || board[i] || currentPlayer !== role) return;
+                try {
+                    await X3O3Multiplayer.makeMove(code, i, role);
+                } catch (e) {
+                    // Optionally show error
+                    console.error('Multiplayer move error:', e);
+                }
+            };
+        }
+        // Listen for game state changes from Firestore
+        if (multiplayerUnsub) multiplayerUnsub();
+        multiplayerUnsub = X3O3Multiplayer.listenToGame(code, data => {
+            // Update board and turn from Firestore
+            for (let i = 0; i < 9; i++) board[i] = data.board[i] || null;
+            moveHistory.X = data.board.map((v, i) => v === 'X' ? i : null).filter(i => i !== null);
+            moveHistory.O = data.board.map((v, i) => v === 'O' ? i : null).filter(i => i !== null);
+            currentPlayer = data.currentTurn;
+            gameActive = data.status === 'in_progress';
+            gameMode = data.mode;
+            updateBoard();
+            updateStatus();
+            // Optionally handle win/draw UI here if you add win logic to Firestore
+        });
+    }
+});
 
 // --- End of script.js ---

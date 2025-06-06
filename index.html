@@ -36,7 +36,29 @@
                     <option value="high-contrast">High Contrast</option>
                 </select>
             </div>
-            <button type="submit" class="neon-btn" style="margin-top:1.5em;">Start Game</button>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:0.5em;margin-top:1.5em;">
+                <button type="submit" class="neon-btn">Start Local Game</button>
+                <span style="color:#888;font-size:0.95em;">or</span>
+                <button id="showMultiplayerBtn" type="button" class="neon-btn" style="background:#181a20;border-color:#0ff;color:#0ff;">Online Multiplayer</button>
+            </div>
+        </form>
+        <form id="multiplayerForm" style="display:none;flex-direction:column;align-items:center;gap:1.2rem;margin-top:1.5em;">
+            <div style="display:flex;gap:1em;">
+                <button id="createLobbyBtn" type="button" class="neon-btn">Create Lobby</button>
+                <button id="showJoinLobbyBtn" type="button" class="neon-btn">Join Lobby</button>
+            </div>
+            <div id="lobbyCreateSection" style="display:none;flex-direction:column;align-items:center;gap:0.7em;">
+                <span id="lobbyCodeDisplay" class="neon-text" style="font-size:1.2em;"></span>
+                <span id="lobbyStatus" class="neon-text"></span>
+                <button id="copyLobbyCodeBtn" type="button" class="neon-btn" style="font-size:0.95em;">Copy Code</button>
+                <button id="cancelLobbyBtn" type="button" class="neon-btn" style="font-size:0.95em;">Cancel</button>
+            </div>
+            <div id="lobbyJoinSection" style="display:none;flex-direction:column;align-items:center;gap:0.7em;">
+                <input id="joinLobbyCodeInput" type="text" maxlength="6" placeholder="Enter Lobby Code" style="font-size:1.1em;text-transform:uppercase;letter-spacing:0.2em;text-align:center;" />
+                <button id="joinLobbyBtn" type="button" class="neon-btn">Join</button>
+                <span id="joinLobbyError" class="neon-text" style="color:#f06;"></span>
+                <button id="cancelJoinLobbyBtn" type="button" class="neon-btn" style="font-size:0.95em;">Cancel</button>
+            </div>
         </form>
     </div>
     <div class="game-container" id="gameContainer" style="display:none;">
@@ -51,6 +73,11 @@
         </div>
     </div>
     <footer class="footer">X³O³ Tic-Tac-Toe &copy; 2025</footer>
+    <!-- Firebase SDKs for multiplayer -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="multiplayer.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
