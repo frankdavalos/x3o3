@@ -168,6 +168,17 @@ body {
     cursor: not-allowed; /* Change cursor to indicate unclickable */
 }
 
+/* Expert mode: Hide marks */
+.hide-mark {
+    color: transparent !important; /* Make text invisible */
+    text-shadow: none !important; /* Remove any glow effects */
+    filter: none !important; /* Disable any applied filters */
+    pointer-events: none; /* Prevent interaction */
+    background: var(--cell-bg) !important; /* Explicitly set background to match cell */
+    box-shadow: inherit !important; /* Keep the box shadow intact */
+    -webkit-text-stroke: 0 !important; /* Remove text stroke for Safari */
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px), (max-height: 600px) {
     body {
