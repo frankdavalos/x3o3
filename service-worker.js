@@ -7,7 +7,9 @@ const ASSETS = [
   '/script.js',
   '/manifest.json',
   '/image/icon-192.png',
-  'image/icon-512.png'
+  '/image/icon-512.png',
+  '/sounds/x.mp3', // Added X sound
+  '/sounds/o.mp3'  // Added O sound
 ];
 
 self.addEventListener('install', event => {
