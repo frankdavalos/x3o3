@@ -4,22 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>X³O³ Tic-Tac-Toe</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="pwa/manifest.json">
     <meta name="theme-color" content="#0ff">
-    <link rel="icon" type="image/png" sizes="192x192" href="image/icon-192.png">
-    <link rel="apple-touch-icon" href="image/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/images/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/images/icons/icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=Bungee+Outline&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Navigation bar with home button -->
+    <div id="navBar" class="nav-bar">
+        <button id="homeButton" class="home-button neon-btn">Main Menu</button>
+    </div>
+    
     <!-- Theme switcher on splash only -->
-    <div id="splash" class="splash-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:fixed;z-index:1000;top:0;left:0;width:100vw;height:100vh;background:rgba(10,10,30,0.98);">
+    <div id="splash" class="splash-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:fixed;z-index:999;top:0;left:0;width:100vw;height:100vh;background:rgba(10,10,30,0.98);padding-top:50px;">
         <h1 class="neon-title">X³O³</h1>
         <form id="splashForm" style="display:flex;flex-direction:column;align-items:center;gap:1.5rem;">
-            <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1.5rem;">
                 <label style="font-size:1.1rem;margin-bottom:0.5em;">Choose Game Mode:</label>
                 <div style="display:flex;flex-direction:column;gap:0.5em;">
                     <label class="mode-card"><input type="radio" name="gameMode" value="classic" checked> Classic <span class="mode-desc">Standard rules</span></label>
@@ -28,13 +33,6 @@
                     <label class="mode-card"><input type="radio" name="gameMode" value="expert"> Expert <span class="mode-desc">(Only most recent mark visible)</span></label>
                     <label class="mode-card"><input type="radio" name="gameMode" value="luck"> Luck <span class="mode-desc">(Random cell blocked after 6th move)</span></label>
                 </div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;">
-                <label for="themeSwitcherSplash" style="font-size:1.1rem;margin-bottom:0.5em;">Theme:</label>
-                <select id="themeSwitcherSplash" aria-label="Theme Switcher" style="font-size:1rem;">
-                    <option value="neon">Neon Cyberpunk</option>
-                    <option value="high-contrast">High Contrast</option>
-                </select>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:0.5em;margin-top:1.5em;">
                 <button type="submit" class="neon-btn">Start Local Game</button>
@@ -46,6 +44,9 @@
             <div style="display:flex;gap:1em;">
                 <button id="createLobbyBtn" type="button" class="neon-btn">Create Lobby</button>
                 <button id="showJoinLobbyBtn" type="button" class="neon-btn">Join Lobby</button>
+            </div>
+            <div id="backToMenuDiv" style="margin-top: 1.2rem;">
+                <button id="backToMenuBtn" type="button" class="neon-btn" style="background:#0a1020;border-color:#ff2eae;color:#ff2eae;">Back to Main Menu</button>
             </div>
             <div id="lobbyCreateSection" style="display:none;flex-direction:column;align-items:center;gap:0.7em;">
                 <span id="lobbyCodeDisplay" class="neon-text" style="font-size:1.2em;"></span>
@@ -77,7 +78,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="multiplayer.js"></script>
-    <script src="script.js"></script>
+    <script src="js/multiplayer/multiplayer.js"></script>
+    <script src="js/core/script.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('pwa/service-worker.js');
+      });
+    }
+    </script>
 </body>
 </html>
