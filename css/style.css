@@ -31,7 +31,20 @@
   top: 0;
   left: 0;
   z-index: 1500; /* Higher than splash screen */
-  pointer-events: auto; /* Ensure clicks work */
+  pointer-events: none; /* Only the buttons themselves catch clicks */
+  box-sizing: border-box;
+}
+
+.nav-bar > * {
+  pointer-events: auto;
+}
+
+.sound-toggle {
+  margin-left: auto;
+}
+
+.home-button[hidden] {
+  display: none;
 }
 
 .home-button {
@@ -82,7 +95,7 @@ body {
     background: rgba(20, 20, 40, 0.95);
     border: 2px solid var(--primary);
     border-radius: 20px;
-    box-shadow: 0 0 40px 10px var(--primary)8, 0 0 80px 10px var(--secondary) inset, 0 2px 24px 0 rgba(0,0,0,0.18);
+    box-shadow: 0 0 40px 4px #16f0ff44, 0 2px 24px 0 rgba(0,0,0,0.18);
     padding: clamp(0.5rem, 3vw, 2rem) clamp(0.2rem, 2vw, 1.5rem) clamp(0.5rem, 2vw, 1.5rem) clamp(0.2rem, 2vw, 1.5rem);
     margin-top: clamp(1vh, 3vh, 5vh);
     display: flex;
@@ -105,22 +118,60 @@ body {
     aspect-ratio: 1 / 1;
     margin: 0 auto;
     box-sizing: border-box;
+    /* Lets cells size their marks relative to the board (cqi units). */
+    container-type: inline-size;
 }
 
 .cell {
     width: 100%;
     height: 100%;
-    font-size: clamp(4rem, 10vw, 6rem);
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: 18cqi;
+    line-height: 1;
+    color: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--cell-bg);
     border: 2px solid var(--cell-border);
     border-radius: 10px;
-    box-shadow: 0 0 10px var(--primary)2, 0 0 20px var(--secondary)2 inset;
+    box-shadow: 0 0 10px #16f0ff22, 0 0 20px #ff2eae22 inset;
     overflow: hidden;
     position: relative;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
+
+.cell:focus-visible {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px;
+}
+
+@media (hover: hover) {
+    .cell:not(.x):not(.o):not(.blocked):not(.hide-mark):hover {
+        border-color: var(--primary);
+        background: #16f0ff14;
+    }
+}
+
+.cell.shake {
+    animation: cell-shake 0.25s ease-in-out;
+}
+
+@keyframes cell-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+.mark-x { color: var(--x-color); font-weight: bold; }
+.mark-o { color: var(--o-color); font-weight: bold; }
 
 .cell.x, .cell.o {
     font-family: 'Bungee Outline', 'Orbitron', 'Segoe UI', Arial, sans-serif;
@@ -169,6 +220,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-top: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 .neon-text {
@@ -207,7 +259,6 @@ body {
     color: transparent !important; /* Make text invisible */
     text-shadow: none !important; /* Remove any glow effects */
     filter: none !important; /* Disable any applied filters */
-    pointer-events: none; /* Prevent interaction */
     background: var(--cell-bg) !important; /* Explicitly set background to match cell */
     box-shadow: inherit !important; /* Keep the box shadow intact */
     -webkit-text-stroke: 0 !important; /* Remove text stroke for Safari */
@@ -270,8 +321,5 @@ body {
     }
     .game-board {
         max-width: 340px;
-    }
-    .cell {
-        font-size: 2.2rem;
     }
 }

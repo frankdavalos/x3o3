@@ -61,7 +61,7 @@ sequenceDiagram
 
 ### 1. index.html
 - Splash page for mode/theme selection, multiplayer UI, game board, status, and PWA meta.
-- Loads `style.css`, `script.js`, `multiplayer.js`, and Firebase SDKs.
+- Loads `style.css`, `multiplayer.js`, `sound.js` and `script.js`. The Firebase SDK is loaded on demand by `multiplayer.js` only when the player opens Online Multiplayer.
 
 ### 2. style.css
 - Neon cyberpunk and high-contrast themes via CSS variables.
@@ -70,7 +70,7 @@ sequenceDiagram
 
 ### 3. script.js
 - **Game Logic:** Board state, move history, win/draw logic, rotation, and UI updates.
-- **Audio:** Web Audio API and fallback for sound effects.
+- **Audio:** Calls into `sound.js` for move, vanish, block, invalid, win and draw effects; sound on/off toggle persisted in localStorage.
 - **Theme/Mode:** Switching and persistence.
 - **PWA:** Service worker registration, update notification.
 - **Multiplayer UI:** Lobby creation/join, real-time sync, event handlers, and integration with `multiplayer.js`.
@@ -85,15 +85,17 @@ sequenceDiagram
   - Real-time listeners keep both clients in sync.
 
 ### 5. service-worker.js
-- Caches static assets and sounds for offline play.
-- Bypasses Firestore requests to avoid breaking multiplayer.
+- Lives at the site root so its scope covers `index.html`; asset paths are relative.
+- Stale-while-revalidate cache for same-origin files and Google Fonts, for offline play.
+- Ignores all other cross-origin requests (Firebase SDK, Firestore).
 - Handles update notifications.
 
 ### 6. manifest.json
 - PWA manifest: name, icons, theme color, display mode, start URL.
 
-### 7. sounds/
-- `x.mp3`, `o.mp3`, `winner.mp3` for in-game audio feedback.
+### 7. js/core/sound.js
+- All sound effects are synthesized at runtime with the Web Audio API (oscillators + filtered noise); there are no audio files to download or cache.
+- The AudioContext is created on the first user gesture, as mobile browsers require.
 
 ---
 

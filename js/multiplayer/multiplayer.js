@@ -15,16 +15,45 @@ const firebaseConfig = {
 
 // --- Firebase Initialization ---
 let app, db, auth, user;
+let initPromise = null;
 
-async function initFirebase() {
-  if (!window.firebase) throw new Error("Firebase SDK not loaded");
-  app = firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  auth = firebase.auth();
-  // Anonymous sign-in
-  await auth.signInAnonymously();
-  user = auth.currentUser;
-  return user;
+const FIREBASE_SDK = [
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js',
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js'
+];
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+// Loads the Firebase SDK on demand and signs in anonymously. Safe to call
+// repeatedly: concurrent and later calls share one in-flight promise, and a
+// failure clears it so the next call can retry.
+function initFirebase() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      if (!window.firebase) {
+        for (const src of FIREBASE_SDK) await loadScript(src); // app must load first
+      }
+      app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      auth = firebase.auth();
+      await auth.signInAnonymously();
+      user = auth.currentUser;
+      return user;
+    })().catch(err => {
+      initPromise = null;
+      throw err;
+    });
+  }
+  return initPromise;
 }
 
 // --- Lobby Code Generation ---
@@ -48,6 +77,8 @@ async function createLobby(selectedMode) {
     await ref.set({
       players: { X: user.uid, O: null },
       board: Array(9).fill(""),
+      moveHistory: { X: [], O: [] },
+      blockedCell: null,
       currentTurn: "X",
       status: "waiting",
       mode: selectedMode,
@@ -94,17 +125,80 @@ async function makeMove(code, idx, value) {
     if (data.status !== "in_progress") throw new Error("Game not active");
     if (data.currentTurn !== value) throw new Error("Not your turn");
     if (data.board[idx]) throw new Error("Cell occupied");
-    // Update board
+
+    // Ensure blocked cell remains locked
+    if (data.mode === 'luck' && data.blockedCell === idx) throw new Error("Cell blocked");
+
+    // Update board and move history
     const newBoard = data.board.slice();
     newBoard[idx] = value;
-    // Check for win/draw (client-side for MVP)
+
+    const newMoveHistory = {
+      X: [...(data.moveHistory?.X || [])],
+      O: [...(data.moveHistory?.O || [])]
+    };
+    newMoveHistory[value].push(idx);
+
     let nextTurn = value === "X" ? "O" : "X";
     let status = "in_progress";
-    // (Win/draw logic should be added here for production)
+    let winner = null;
+    let winningCombo = null;
+    let blockedCell = data.blockedCell === undefined ? null : data.blockedCell;
+
+    // Apply rotation rules
+    if (data.mode !== 'classic') {
+      if (newMoveHistory[value].length > 3) {
+        const oldest = newMoveHistory[value].shift();
+        newBoard[oldest] = "";
+      }
+    }
+
+    // Apply luck mode cell blocking
+    if (data.mode === 'luck' && blockedCell === null && newMoveHistory.X.length + newMoveHistory.O.length === 6) {
+      let open = newBoard.map((v, i) => v === "" ? i : null).filter(i => i !== null);
+      if (open.length) {
+        blockedCell = open[Math.floor(Math.random() * open.length)];
+      }
+    }
+
+    // Check win condition
+    const winCombos = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+      [0, 4, 8], [2, 4, 6]           // diags
+    ];
+
+    for (const combo of winCombos) {
+      const [a, b, c] = combo;
+      if (newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]) {
+        winner = newBoard[a];
+        winningCombo = combo;
+        status = "finished";
+        break;
+      }
+    }
+
+    // Check draw
+    if (!winner) {
+      let allFilled = true;
+      for (let i = 0; i < 9; i++) { // board is 0 to 8
+        if (!newBoard[i] && !(data.mode === 'luck' && blockedCell === i)) {
+          allFilled = false;
+          break;
+        }
+      }
+      if (allFilled) {
+        status = "finished";
+      }
+    }
+
     tx.update(ref, {
       board: newBoard,
+      moveHistory: newMoveHistory,
+      blockedCell: blockedCell,
       currentTurn: nextTurn,
-      status
+      status: status,
+      ...(winner && { winner, winningCombo })
     });
   });
 }
@@ -112,19 +206,19 @@ async function makeMove(code, idx, value) {
 // --- Handle Game Abandonment ---
 async function abandonGame(code, playerRole) {
   if (!code) return false;
-  
+
   try {
     const ref = db.collection('games').doc(code);
     const doc = await ref.get();
-    
+
     if (!doc.exists) return false;
-    
+
     await ref.update({
       status: 'abandoned',
       abandonedBy: playerRole,
       lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     });
-    
+
     return true;
   } catch (error) {
     console.error('Error abandoning game:', error);

@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isUser(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    match /games/{gameId} {
+      // Anyone can read game state to look up lobbies
+      allow read: if true;
+
+      // Create: user must be authenticated, set themselves as player X, and player O as null.
+      // Status must be 'waiting'
+      allow create: if isAuthenticated() &&
+                    request.resource.data.players.X == request.auth.uid &&
+                    request.resource.data.players.O == null &&
+                    request.resource.data.status == 'waiting';
+
+      // Update rules
+      allow update: if isAuthenticated() && (
+        // Case 1: Joining a waiting game
+        // Must be in 'waiting' state, O must be null previously, user sets themselves as O, status becomes 'in_progress'
+        (
+          resource.data.status == 'waiting' &&
+          resource.data.players.O == null &&
+          request.resource.data.players.O == request.auth.uid &&
+          request.resource.data.status == 'in_progress' &&
+          // Cannot hijack player X
+          request.resource.data.players.X == resource.data.players.X
+        ) ||
+        // Case 2: Gameplay - Making moves
+        // Status must be 'in_progress', user must be player X or O, and status must either stay 'in_progress' or transition to 'finished'
+        (
+          resource.data.status == 'in_progress' &&
+          (isUser(resource.data.players.X) || isUser(resource.data.players.O)) &&
+          (request.resource.data.status == 'in_progress' || request.resource.data.status == 'finished')
+        ) ||
+        // Case 3: Abandoning the game
+        // User must be a player, and the status changes to 'abandoned'
+        (
+          (resource.data.status == 'in_progress' || resource.data.status == 'waiting') &&
+          (isUser(resource.data.players.X) || isUser(resource.data.players.O)) &&
+          request.resource.data.status == 'abandoned'
+        )
+      );
+
+      // Creator can delete the lobby if it hasn't started yet
+      allow delete: if isUser(resource.data.players.X) && resource.data.status == 'waiting';
+    }
+  }
+}

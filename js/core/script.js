@@ -2,9 +2,10 @@
 
 // --- Game State ---
 const board = Array(9).fill(null); // 3x3 grid, 0-8
-const moveHistory = { X: [], O: [] }; // Track moves for each player
+const moveHistory = { X: [], O: [] }; // Cells each player occupies, oldest first
+const MAX_MARKS = 3; // Rotating modes: a 4th mark removes the player's oldest
 let currentPlayer = 'X';
-let gameActive = true;
+let gameActive = false;
 
 const winCombos = [
     [0,1,2], [3,4,5], [6,7,8], // rows
@@ -20,100 +21,77 @@ const MODES = {
     expert: 'Expert',
     luck: 'Luck'
 };
+const MODE_STORAGE_KEY = 'x3o3-mode';
 let gameMode = 'classic';
 let blockedCell = null; // for luck mode
+
+// --- Multiplayer Global State ---
+let multiplayerUnsub = null;
+let currentLobbyCode = null;
+let multiplayerRole = null;
+let multiplayerMode = null;
+let isMultiplayer = false;
 
 // --- DOM Elements ---
 const gameBoard = document.getElementById('gameBoard');
 const statusText = document.getElementById('status');
 const newGameBtn = document.getElementById('newGameBtn');
 const homeButton = document.getElementById('homeButton');
-const navBar = document.getElementById('navBar');
+const soundToggle = document.getElementById('soundToggle');
 
 // --- Splash Elements ---
 const splash = document.getElementById('splash');
 const splashForm = document.getElementById('splashForm');
+const multiplayerForm = document.getElementById('multiplayerForm');
+const lobbyCreateSection = document.getElementById('lobbyCreateSection');
+const lobbyJoinSection = document.getElementById('lobbyJoinSection');
 const gameContainer = document.getElementById('gameContainer');
 const backToSplashBtn = document.getElementById('backToSplashBtn');
 
-// --- Default Theme Setting ---
-function setDefaultTheme() {
-    // Always use the neon theme (default)
-    document.body.classList.remove('theme-high-contrast');
-    localStorage.setItem('theme', 'neon');
-}
-function getTheme() {
-    return 'neon'; // Always return neon theme
-}
-
 // --- Splash Logic ---
 function showSplash() {
-    // Reset game state
-    gameActive = true;
+    gameActive = false;
     currentPlayer = 'X';
-    
-    // Reset UI visibility
+
     splash.style.display = 'flex';
     gameContainer.style.display = 'none';
-    
+    homeButton.hidden = true;
+
     // Reset multiplayer UI
     multiplayerForm.style.display = 'none';
     splashForm.style.display = 'flex';
     lobbyCreateSection.style.display = 'none';
     lobbyJoinSection.style.display = 'none';
-    
+
     // Clear any game data
     for (let i = 0; i < 9; i++) board[i] = null;
     moveHistory.X = [];
     moveHistory.O = [];
-    
-    console.log("Main menu displayed");
+    blockedCell = null;
 }
 function hideSplash() {
     splash.style.display = 'none';
     gameContainer.style.display = 'flex';
+    homeButton.hidden = false;
 }
 
-// Home button handler for universal navigation
-function handleHomeNavigation() {
-    console.log("Home button clicked");
-    
-    // Check if we're already on the main menu's game mode selection
-    if (splash.style.display === 'flex' && splashForm.style.display === 'flex') {
-        console.log("Already on main menu");
-        return;
-    }
-    
-    // If in multiplayer UI screens (lobby creation/joining)
-    if (splash.style.display === 'flex' && multiplayerForm.style.display === 'flex') {
-        console.log("Returning from multiplayer UI to main menu");
-        cleanupMultiplayerResources();
-        multiplayerForm.style.display = 'none';
-        splashForm.style.display = 'flex';
-        return;
-    }
-    
-    // If in an active multiplayer game, show confirmation
-    if (isMultiplayer && currentLobbyCode) {
-        if (!confirm('Are you sure you want to leave the current game and return to the main menu?')) {
-            return; // User cancelled
-        }
-        
-        console.log("Leaving active multiplayer game");
-        // Notify other player if in a multiplayer game
-        notifyOpponentOfDeparture();
-        
-        // Clean up Firebase listeners
-        cleanupMultiplayerResources();
-    }
-    
-    // Reset multiplayer state
+function resetMultiplayerState() {
     isMultiplayer = false;
     multiplayerRole = null;
     currentLobbyCode = null;
     multiplayerMode = null;
-    
-    // Navigate to main menu
+}
+
+// Leave whatever screen we're on and go back to the main menu.
+function returnToMainMenu() {
+    if (isMultiplayer && currentLobbyCode) {
+        if (!confirm('Are you sure you want to leave the current game and return to the main menu?')) {
+            return;
+        }
+        notifyOpponentOfDeparture();
+    }
+    cleanupMultiplayerResources();
+    resetMultiplayerState();
     showSplash();
 }
 
@@ -128,41 +106,17 @@ function cleanupMultiplayerResources() {
 // Notify opponent that this player has left
 function notifyOpponentOfDeparture() {
     if (!currentLobbyCode || !multiplayerRole) return;
-    
-    // Use the abandonGame function from multiplayer.js
     X3O3Multiplayer.abandonGame(currentLobbyCode, multiplayerRole)
         .catch(err => console.error('Error abandoning game:', err));
 }
 
-backToSplashBtn.addEventListener('click', () => {
-    console.log("Back to splash button clicked");
-    
-    // If in an active multiplayer game, confirm first
-    if (isMultiplayer && currentLobbyCode) {
-        if (!confirm('Are you sure you want to leave the current game and return to the main menu?')) {
-            return; // User cancelled
-        }
-        
-        // Clean up Firebase resources
-        notifyOpponentOfDeparture();
-        cleanupMultiplayerResources();
-    }
-    
-    // Reset multiplayer state
-    isMultiplayer = false;
-    multiplayerRole = null;
-    currentLobbyCode = null;
-    multiplayerMode = null;
-    
-    // Return to main menu
-    showSplash();
-});
+backToSplashBtn.addEventListener('click', returnToMainMenu);
+homeButton.addEventListener('click', returnToMainMenu);
 
 splashForm.addEventListener('submit', e => {
     e.preventDefault();
-    const mode = splashForm.elements['gameMode'].value;
-    gameMode = mode;
-    setDefaultTheme(); // Always use default theme
+    gameMode = splashForm.elements['gameMode'].value;
+    localStorage.setItem(MODE_STORAGE_KEY, gameMode);
     hideSplash();
     startGame();
 });
@@ -175,6 +129,7 @@ function startGame() {
     currentPlayer = 'X';
     gameActive = true;
     blockedCell = null;
+    newGameBtn.style.display = '';
     createBoard();
     updateBoard();
     updateStatus();
@@ -183,7 +138,8 @@ function startGame() {
 function createBoard() {
     gameBoard.innerHTML = '';
     for (let i = 0; i < 9; i++) {
-        const cell = document.createElement('div');
+        const cell = document.createElement('button');
+        cell.type = 'button';
         cell.classList.add('cell');
         cell.dataset.index = i;
         cell.addEventListener('click', handleCellClick);
@@ -191,178 +147,119 @@ function createBoard() {
     }
 }
 
-// Dynamically create AudioContext after user interaction
-let audioContext;
-const soundBuffers = {};
-const audioFallback = {
-    X: new Audio('assets/sounds/x.mp3'),
-    O: new Audio('assets/sounds/o.mp3')
-};
-
-function initializeAudioContext() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        console.log('AudioContext initialized');
-    }
-}
-
-// Function to load and decode sound files
-async function loadSound(player, url) {
-    if (!audioContext) return; // Ensure AudioContext is initialized
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    soundBuffers[player] = await audioContext.decodeAudioData(arrayBuffer);
-}
-
-// Preload sounds for X and O
-function preloadSounds() {
-    if (audioContext) {
-        Promise.all([
-            loadSound('X', 'assets/sounds/x.mp3'),
-            loadSound('O', 'assets/sounds/o.mp3')
-        ]).then(() => console.log('Sounds preloaded')).catch(err => console.error('Sound preload failed:', err));
-    }
-}
-
-// Preload winner sound
-function preloadWinnerSound() {
-    if (audioContext) {
-        loadSound('winner', 'assets/sounds/winner.mp3').then(() => {
-            console.log('Winner sound preloaded');
-        }).catch(err => console.error('Winner sound preload failed:', err));
-    }
-}
-
-// Function to play sound for the current player
-function playSound(player) {
-    if (audioContext && soundBuffers[player]) {
-        const source = audioContext.createBufferSource();
-        source.buffer = soundBuffers[player];
-        source.connect(audioContext.destination);
-        source.start(0); // Play immediately
-    } else if (audioFallback[player]) {
-        audioFallback[player].currentTime = 0; // Reset sound to the beginning
-        audioFallback[player].play().catch(err => console.error('Audio fallback play failed:', err));
-    }
-}
-
-// Play winner sound
-function playWinnerSound() {
-    if (audioContext && soundBuffers['winner']) {
-        const source = audioContext.createBufferSource();
-        source.buffer = soundBuffers['winner'];
-        source.connect(audioContext.destination);
-        source.start(0);
-    } else {
-        const winnerFallback = new Audio('assets/sounds/winner.mp3');
-        winnerFallback.play().catch(err => console.error('Winner fallback play failed:', err));
-    }
+function rejectMove(cell) {
+    X3O3Sound.play('invalid');
+    cell.classList.remove('shake');
+    void cell.offsetWidth; // restart the animation
+    cell.classList.add('shake');
 }
 
 function handleCellClick(e) {
-    const idx = +e.target.dataset.index;
-    if (!gameActive || board[idx]) return;
-
-    // Ensure blocked cell remains locked
-    if (gameMode === 'luck' && blockedCell === idx) return;
-
-    // Place mark
-    board[idx] = currentPlayer;
-    moveHistory[currentPlayer].push(idx);
-    playSound(currentPlayer); // Play sound for the current player
-    updateBoard();
-
-    // Classic mode: no rotation
-    if (gameMode === 'classic') {
-        // Check win
-        const winner = checkWinner();
-        if (winner) {
-            gameActive = false;
-            highlightWinner(winner.combo);
-            statusText.innerHTML = `<span style='color:${winner.player === "X" ? "#0ff" : "#f06"}'>${winner.player}</span> wins!`;
-            return;
-        }
-        if (board.every(cell => cell)) {
-            statusText.textContent = "It's a draw!";
-            gameActive = false;
-            return;
-        }
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        updateStatus();
+    const cell = e.currentTarget;
+    const idx = +cell.dataset.index;
+    if (!gameActive) return;
+    if (board[idx] || (gameMode === 'luck' && blockedCell === idx)) {
+        rejectMove(cell);
         return;
     }
 
-    // Rotating modes
-    if (moveHistory[currentPlayer].length > 3) {
-        const oldest = moveHistory[currentPlayer].shift();
+    const player = currentPlayer;
+    board[idx] = player;
+    moveHistory[player].push(idx);
+    X3O3Sound.play(player);
+
+    // Rotating modes: placing a 4th mark removes the player's oldest one.
+    if (gameMode !== 'classic' && moveHistory[player].length > MAX_MARKS) {
+        const oldest = moveHistory[player].shift();
         board[oldest] = null;
-        updateBoard();
+        X3O3Sound.play('vanish', 0.08);
     }
-    // Luck mode: block a cell after 6th move
-    if (gameMode === 'luck' && !blockedCell && moveHistory.X.length + moveHistory.O.length === 6) {
-        let open = board.map((v, i) => v ? null : i).filter(i => i !== null);
+
+    // Luck mode: once the 6th mark is down, lock one random empty cell for the rest of the game.
+    if (gameMode === 'luck' && blockedCell === null &&
+        moveHistory.X.length + moveHistory.O.length === 2 * MAX_MARKS) {
+        const open = board.map((v, i) => v ? null : i).filter(i => i !== null);
         if (open.length) {
             blockedCell = open[Math.floor(Math.random() * open.length)];
-            updateBoard();
+            X3O3Sound.play('block', 0.15);
         }
     }
 
-    // Check win
     const winner = checkWinner();
     if (winner) {
-        gameActive = false;
-        highlightWinner(winner.combo);
-        statusText.innerHTML = `<span style='color:${winner.player === "X" ? "#0ff" : "#f06"}'>${winner.player}</span> wins!`;
+        endGame(winner);
         return;
     }
-    if (board.every((cell, i) => cell || (gameMode === 'luck' && blockedCell === i))) {
-        statusText.textContent = "It's a draw!";
-        gameActive = false;
+    if (board.every((v, i) => v || (gameMode === 'luck' && blockedCell === i))) {
+        endGame(null);
         return;
     }
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+    currentPlayer = player === 'X' ? 'O' : 'X';
+    updateBoard();
     updateStatus();
+}
+
+function endGame(winner) {
+    gameActive = false;
+    updateBoard(); // reveals hidden marks in expert mode
+    if (winner) {
+        highlightWinner(winner.combo);
+        setStatusWinner(winner.player);
+    } else {
+        statusText.textContent = "It's a draw!";
+        X3O3Sound.play('draw', 0.1);
+    }
+}
+
+function markSpan(player) {
+    const span = document.createElement('span');
+    span.className = `mark-${player.toLowerCase()}`;
+    span.textContent = player;
+    return span;
+}
+
+function setStatusWinner(player) {
+    statusText.replaceChildren(markSpan(player), ' wins!');
 }
 
 function updateBoard() {
     for (let i = 0; i < 9; i++) {
         const cell = gameBoard.children[i];
-        cell.textContent = board[i] ? board[i] : '';
+        const mark = board[i];
         cell.className = 'cell';
-        if (board[i]) cell.classList.add(board[i].toLowerCase());
+        cell.textContent = mark || '';
+        let label = mark ? `Cell ${i + 1}, ${mark}` : `Cell ${i + 1}, empty`;
+        if (mark) cell.classList.add(mark.toLowerCase());
 
-        // Expert: hide all but most recent mark for each player
-        if (gameMode === 'expert') {
-            ['X', 'O'].forEach(player => {
-                if (moveHistory[player].includes(i)) {
-                    const isMostRecent = moveHistory[player][moveHistory[player].length - 1] === i;
-                    if (!isMostRecent) {
-                        cell.classList.add('hide-mark');
-                        cell.textContent = ''; // Clear text for hidden marks
-                    }
-                }
-            });
-        }
-
-        // Beginner: fade oldest mark for each player (no min count)
-        if (gameMode === 'beginner') {
-            ['X', 'O'].forEach(player => {
-                if (moveHistory[player].length > 0 && moveHistory[player][0] === i) {
-                    cell.classList.add('fade-out');
-                }
-            });
+        if (mark && gameActive) {
+            const history = moveHistory[mark];
+            // Expert: only each player's most recent mark is visible while playing.
+            if (gameMode === 'expert' && history[history.length - 1] !== i) {
+                cell.classList.add('hide-mark');
+                cell.textContent = '';
+                label = `Cell ${i + 1}`;
+            }
+            // Beginner: fade the mark that will vanish on that player's next move.
+            if (gameMode === 'beginner' && history.length === MAX_MARKS && history[0] === i) {
+                cell.classList.add('fade-out');
+                label += ' (vanishes next)';
+            }
         }
 
         // Luck: blocked cell
         if (gameMode === 'luck' && blockedCell === i) {
             cell.classList.add('blocked');
             cell.textContent = '';
+            label = `Cell ${i + 1}, blocked`;
         }
+
+        cell.setAttribute('aria-label', label);
     }
 }
 
 function updateStatus() {
-    statusText.innerHTML = `Turn: <span style='color:${currentPlayer==="X"?"#0ff":"#f06"}'>${currentPlayer}</span> | Mode: <b>${MODES[gameMode]}</b>`;
+    statusText.replaceChildren('Turn: ', markSpan(currentPlayer), ` · ${MODES[gameMode]}`);
 }
 
 // --- Check for Winner ---
@@ -381,97 +278,70 @@ function highlightWinner(combo) {
     combo.forEach(idx => {
         gameBoard.children[idx].classList.add('winner');
     });
-    playWinnerSound(); // Play the winner sound
+    X3O3Sound.play('win', 0.12);
 }
 
 // Display options for user after game ends
 function showGameEndOptions() {
-    // Make new game button visible
     newGameBtn.textContent = "New Game";
     newGameBtn.style.display = 'block';
-    
-    // Make back to menu button visible and in focus
     backToSplashBtn.style.display = 'block';
     backToSplashBtn.focus();
 }
 
-// --- New Game ---
-function newGame() {
-    for (let i = 0; i < 9; i++) board[i] = null;
-    moveHistory.X = [];
-    moveHistory.O = [];
-    currentPlayer = 'X';
-    gameActive = true;
-    updateBoard();
-    updateStatus();
+// --- Sound toggle ---
+function renderSoundToggle() {
+    const muted = X3O3Sound.isMuted();
+    soundToggle.textContent = muted ? 'Sound: Off' : 'Sound: On';
+    soundToggle.setAttribute('aria-pressed', String(!muted));
 }
+soundToggle.addEventListener('click', () => {
+    X3O3Sound.setMuted(!X3O3Sound.isMuted());
+    renderSoundToggle();
+});
 
 // --- Event Listeners ---
 newGameBtn.addEventListener('click', startGame);
-homeButton.addEventListener('click', handleHomeNavigation);
 
 // --- Initial Load ---
 window.addEventListener('DOMContentLoaded', () => {
-    setDefaultTheme(); // Always use default theme
-    showSplash();
-    preloadWinnerSound();
-    
-    // Ensure buttons are properly initialized
-    console.log("Initializing navigation buttons");
-
-    // Ensure AudioContext is unlocked on mobile devices and revisits
-    const unlockAudioContext = () => {
-        initializeAudioContext();
-        preloadSounds();
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume().then(() => {
-                console.log('AudioContext resumed');
-            }).catch(err => console.error('AudioContext resume failed:', err));
-        }
-        // Remove the event listener after unlocking
-        document.removeEventListener('click', unlockAudioContext);
-        document.removeEventListener('touchstart', unlockAudioContext);
-        document.removeEventListener('keydown', unlockAudioContext);
-    };
-
-    // Add event listeners for user interaction
-    document.addEventListener('click', unlockAudioContext);
-    document.addEventListener('touchstart', unlockAudioContext);
-    document.addEventListener('keydown', unlockAudioContext);
-
-    // Attempt to unlock immediately if possible (e.g., revisits)
-    if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-            console.log('AudioContext resumed on load');
-        }).catch(err => console.error('AudioContext resume on load failed:', err));
+    const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+    if (savedMode && MODES[savedMode]) {
+        const radio = splashForm.querySelector(`input[name="gameMode"][value="${savedMode}"]`);
+        if (radio) radio.checked = true;
     }
-});
+    renderSoundToggle();
+    showSplash();
 
-// --- Multiplayer Integration (MVP) ---
-// Example usage (UI integration required):
-// 1. Call X3O3Multiplayer.initFirebase() on app load
-// 2. Use X3O3Multiplayer.createLobby(selectedMode) to create a lobby
-// 3. Use X3O3Multiplayer.joinLobby(code) to join
-// 4. Use X3O3Multiplayer.listenToGame(code, callback) for real-time updates
-// 5. Use X3O3Multiplayer.makeMove(code, idx, value) to make a move
-// See multiplayer.js for details
+    // Browsers only allow audio after a user gesture; warm the AudioContext
+    // on the first one so the first move's sound isn't dropped.
+    const unlock = () => {
+        X3O3Sound.unlock();
+        document.removeEventListener('pointerdown', unlock);
+        document.removeEventListener('keydown', unlock);
+    };
+    document.addEventListener('pointerdown', unlock);
+    document.addEventListener('keydown', unlock);
+});
 
 // --- PWA: Service Worker Registration & Update Handling ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // Older builds registered a worker under /pwa/ that never controlled the page.
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.filter(r => r.scope.endsWith('/pwa/')).forEach(r => r.unregister());
+    });
+
     navigator.serviceWorker.register('service-worker.js').then(reg => {
-      // Listen for updates
       reg.onupdatefound = () => {
         const installingWorker = reg.installing;
         installingWorker.onstatechange = () => {
-          if (installingWorker.state === 'installed') {
-            if (navigator.serviceWorker.controller) {
-              showUpdateNotification();
-            }
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateNotification();
           }
         };
       };
-    });
+    }).catch(err => console.warn('Service worker registration failed:', err));
   });
 }
 
@@ -479,12 +349,7 @@ function showUpdateNotification() {
   const updateBar = document.createElement('div');
   updateBar.textContent = 'A new version is available. Click to update!';
   updateBar.style.cssText = 'position:fixed;bottom:0;left:0;width:100vw;background:#0ff;color:#181a20;font-weight:bold;text-align:center;padding:1em;z-index:2000;cursor:pointer;box-shadow:0 -2px 8px #0ff8;';
-  updateBar.onclick = () => {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
-    }
-    window.location.reload();
-  };
+  updateBar.onclick = () => window.location.reload();
   document.body.appendChild(updateBar);
 }
 
@@ -492,12 +357,8 @@ function showUpdateNotification() {
 window.addEventListener('DOMContentLoaded', () => {
     // Multiplayer UI elements
     const showMultiplayerBtn = document.getElementById('showMultiplayerBtn');
-    const multiplayerForm = document.getElementById('multiplayerForm');
-    const splashForm = document.getElementById('splashForm');
     const createLobbyBtn = document.getElementById('createLobbyBtn');
     const showJoinLobbyBtn = document.getElementById('showJoinLobbyBtn');
-    const lobbyCreateSection = document.getElementById('lobbyCreateSection');
-    const lobbyJoinSection = document.getElementById('lobbyJoinSection');
     const lobbyCodeDisplay = document.getElementById('lobbyCodeDisplay');
     const lobbyStatus = document.getElementById('lobbyStatus');
     const copyLobbyCodeBtn = document.getElementById('copyLobbyCodeBtn');
@@ -507,17 +368,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const joinLobbyError = document.getElementById('joinLobbyError');
     const cancelJoinLobbyBtn = document.getElementById('cancelJoinLobbyBtn');
 
-    let multiplayerUnsub = null;
-    let currentLobbyCode = null;
-    let multiplayerRole = null;
-    let multiplayerMode = null;
-    let isMultiplayer = false;
-
-    // Initialize Firebase for multiplayer
-    X3O3Multiplayer.initFirebase().catch(console.error);
-
-    // Show multiplayer form
+    // Show multiplayer form. Firebase is only loaded once the player opts in,
+    // so single-player games never pay for (or fail on) the SDK download.
     showMultiplayerBtn.addEventListener('click', () => {
+        X3O3Multiplayer.initFirebase().catch(console.error);
         splashForm.style.display = 'none';
         multiplayerForm.style.display = 'flex';
         lobbyCreateSection.style.display = 'none';
@@ -533,6 +387,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Get selected mode
         const mode = splashForm.elements['gameMode'].value;
         try {
+            await X3O3Multiplayer.initFirebase();
             console.log('Calling createLobby with mode:', mode);
             const code = await X3O3Multiplayer.createLobby(mode);
             currentLobbyCode = code;
@@ -573,6 +428,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         joinLobbyError.textContent = 'Joining lobby...';
         try {
+            await X3O3Multiplayer.initFirebase();
             const data = await X3O3Multiplayer.joinLobby(code);
             console.log('[JoinLobby] joinLobby resolved:', data);
             currentLobbyCode = code;
@@ -684,8 +540,9 @@ window.addEventListener('DOMContentLoaded', () => {
         createBoard(); // Ensure the board DOM exists
         // Set up board, mode, and state from Firestore
         for (let i = 0; i < 9; i++) board[i] = gameData.board[i] || null;
-        moveHistory.X = gameData.board.map((v, i) => v === 'X' ? i : null).filter(i => i !== null);
-        moveHistory.O = gameData.board.map((v, i) => v === 'O' ? i : null).filter(i => i !== null);
+        moveHistory.X = gameData.moveHistory?.X ? [...gameData.moveHistory.X] : [];
+        moveHistory.O = gameData.moveHistory?.O ? [...gameData.moveHistory.O] : [];
+        blockedCell = gameData.blockedCell === undefined ? null : gameData.blockedCell;
         currentPlayer = gameData.currentTurn;
         gameActive = gameData.status === 'in_progress';
         gameMode = gameData.mode;
@@ -724,14 +581,33 @@ window.addEventListener('DOMContentLoaded', () => {
             
             // Update board and turn from Firestore
             for (let i = 0; i < 9; i++) board[i] = data.board[i] || null;
-            moveHistory.X = data.board.map((v, i) => v === 'X' ? i : null).filter(i => i !== null);
-            moveHistory.O = data.board.map((v, i) => v === 'O' ? i : null).filter(i => i !== null);
+            moveHistory.X = data.moveHistory?.X ? [...data.moveHistory.X] : [];
+            moveHistory.O = data.moveHistory?.O ? [...data.moveHistory.O] : [];
+            blockedCell = data.blockedCell === undefined ? null : data.blockedCell;
             currentPlayer = data.currentTurn;
             gameActive = data.status === 'in_progress';
             gameMode = data.mode;
             updateBoard();
             updateStatus();
-            // Optionally handle win/draw UI here if you add win logic to Firestore
+            
+            // Handle completed game
+            if (data.status === 'finished') {
+                gameActive = false;
+                if (data.winner) {
+                    highlightWinner(data.winningCombo);
+                    setStatusWinner(data.winner);
+                } else {
+                    statusText.textContent = "It's a draw!";
+                }
+                
+                // Show back to splash button, but hide new game button for multiplayer
+                backToSplashBtn.style.display = 'block';
+                backToSplashBtn.focus();
+                newGameBtn.style.display = 'none';
+            } else {
+                // Ensure new game button is hidden while playing multiplayer
+                newGameBtn.style.display = 'none';
+            }
         });
     }
 });
