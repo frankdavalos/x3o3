@@ -105,18 +105,36 @@
         invalid(ac, t) {
             tone(ac, { type: 'sawtooth', from: 150, to: 110, start: t, duration: 0.1, volume: 0.35 });
         },
-        // Victory arpeggio (C major, up to the octave) with a shimmering tail.
+        // Victory fanfare: rising arpeggio into a held major chord over a bass
+        // note. Square layers carry well on small phone speakers.
         win(ac, t) {
-            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-                const last = i === 3;
-                tone(ac, { type: 'triangle', from: f, start: t + i * 0.09, duration: last ? 0.6 : 0.16, volume: 0.5 });
-                tone(ac, { type: 'square', from: f * 2, start: t + i * 0.09, duration: last ? 0.4 : 0.1, volume: 0.06 });
+            const run = [523.25, 659.25, 783.99];
+            run.forEach((f, i) => {
+                const at = t + i * 0.12;
+                tone(ac, { type: 'triangle', from: f, start: at, duration: 0.2, volume: 0.6 });
+                tone(ac, { type: 'square', from: f, start: at, duration: 0.15, volume: 0.12 });
             });
+            const hold = t + run.length * 0.12;
+            [523.25, 659.25, 783.99, 1046.5].forEach(f => {
+                tone(ac, { type: 'triangle', from: f, start: hold, duration: 1.1, volume: 0.35, attack: 0.02 });
+                tone(ac, { type: 'square', from: f, start: hold, duration: 0.7, volume: 0.06, attack: 0.02 });
+            });
+            tone(ac, { type: 'sine', from: 130.81, start: hold, duration: 1.1, volume: 0.6, attack: 0.02 });
+            // Sparkle on top of the final chord.
+            noise(ac, { from: 6000, to: 9000, start: hold, duration: 0.5, volume: 0.25, q: 6 });
         },
-        // Draw: two flat, descending notes.
+        // Draw: a deflating "power-down" - three falling notes, the last one
+        // sagging in pitch, over a low hum.
         draw(ac, t) {
-            tone(ac, { type: 'triangle', from: 392, start: t, duration: 0.18, volume: 0.45 });
-            tone(ac, { type: 'triangle', from: 311.13, start: t + 0.18, duration: 0.35, volume: 0.45 });
+            const notes = [[392, 392], [349.23, 349.23], [293.66, 246.94]];
+            notes.forEach(([from, to], i) => {
+                const at = t + i * 0.22;
+                const last = i === notes.length - 1;
+                const duration = last ? 0.8 : 0.22;
+                tone(ac, { type: 'triangle', from, to, start: at, duration, volume: 0.6 });
+                tone(ac, { type: 'square', from, to, start: at, duration: duration * 0.8, volume: 0.1 });
+            });
+            tone(ac, { type: 'sine', from: 98, to: 73.42, start: t, duration: 1.3, volume: 0.45, attack: 0.05 });
         }
     };
 

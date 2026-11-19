@@ -196,6 +196,19 @@ body {
     z-index: 2;
 }
 
+/* Draw: every cell lights up in both players' colors. */
+.cell.draw {
+    border-color: var(--winner-border);
+    box-shadow: 0 0 16px 4px var(--x-color), 0 0 34px 8px var(--o-color);
+    animation: draw-pulse 0.5s ease-in-out 4 alternate;
+    z-index: 2;
+}
+
+@keyframes draw-pulse {
+    from { box-shadow: 0 0 6px 1px var(--x-color), 0 0 12px 2px var(--o-color); }
+    to { box-shadow: 0 0 24px 8px var(--x-color), 0 0 48px 12px var(--o-color); }
+}
+
 .neon-btn {
     background: var(--btn-bg);
     border: 2px solid var(--btn-border);

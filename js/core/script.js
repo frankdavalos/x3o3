@@ -207,8 +207,8 @@ function endGame(winner) {
         highlightWinner(winner.combo);
         setStatusWinner(winner.player);
     } else {
+        highlightDraw();
         statusText.textContent = "It's a draw!";
-        X3O3Sound.play('draw', 0.1);
     }
 }
 
@@ -278,7 +278,13 @@ function highlightWinner(combo) {
     combo.forEach(idx => {
         gameBoard.children[idx].classList.add('winner');
     });
-    X3O3Sound.play('win', 0.12);
+    X3O3Sound.play('win', 0.15); // let the placement sound finish first
+}
+
+// --- Draw: light up the whole board ---
+function highlightDraw() {
+    for (const cell of gameBoard.children) cell.classList.add('draw');
+    X3O3Sound.play('draw', 0.15);
 }
 
 // Display options for user after game ends
@@ -597,6 +603,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     highlightWinner(data.winningCombo);
                     setStatusWinner(data.winner);
                 } else {
+                    highlightDraw();
                     statusText.textContent = "It's a draw!";
                 }
                 
