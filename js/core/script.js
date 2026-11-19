@@ -309,6 +309,11 @@ soundToggle.addEventListener('click', () => {
 // --- Event Listeners ---
 newGameBtn.addEventListener('click', startGame);
 
+// Block pinch zoom on iOS/iPadOS, which ignores user-scalable=no in the viewport meta
+['gesturestart', 'gesturechange'].forEach(type =>
+    document.addEventListener(type, e => e.preventDefault(), { passive: false })
+);
+
 // --- Initial Load ---
 window.addEventListener('DOMContentLoaded', () => {
     const savedMode = localStorage.getItem(MODE_STORAGE_KEY);

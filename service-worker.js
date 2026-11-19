@@ -1,7 +1,7 @@
 // service-worker.js for X³O³ PWA
 // Lives at the site root so its scope covers index.html. Paths are relative so
 // the app also works when hosted under a sub-path (e.g. GitHub Pages).
-const CACHE_NAME = 'x3o3-cache-v3';
+const CACHE_NAME = 'x3o3-cache-v4';
 const ASSETS = [
   './',
   'index.html',
